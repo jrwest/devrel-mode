@@ -1,8 +1,35 @@
+(defvar devrel-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-x\C-rub" 'devrel-mode-update-beam)
+    map)
+  "Keymap for devrel-mode")
+
+(define-minor-mode devrel-mode
+  "Toggle devrel-mode. a mode for working w/ Riak devrels"
+  ;; Init value
+  nil
+  ;; Indicator for mode line
+  " devrel"
+  devrel-mode-map
+  :group 'devrel)
+
+(add-hook 'erlang-mode-hook 'devrel-mode-start-hook)
+
+(defun devrel-mode-start-hook ()
+  "hook to start devrel-mode if in a riak dependency"
+  (if (devrel-mode-buffer-valid-dep) (devrel-mode) nil))    
+
+(defun devrel-mode-buffer-valid-dep ()
+  "returns true if the file belongs to a riak dependency (hardcoded :()"
+  (let ((dep (devrel-mode-buffer-dep-name)))
+    (or (string-equal "riak_core" dep)
+        (string-equal "riak_kv" dep))))
+
 ;; TODO: compile or force save to compile first (assuming edts mode)?
 (defun devrel-mode-update-beam ()
   "updates the clusters lib dirs w/ beam file for current buffer"
   (interactive)
-  (devrel-mode-update-beams (devrel-mode-buffer-beam-file-path) (devrel-mode-buffer-lib-dirs)
+  (devrel-mode-update-beams (devrel-mode-buffer-beam-file-path) (devrel-mode-buffer-lib-dirs))
   (message "updated beams for %s" (file-name-nondirectory (buffer-file-name))))
 
 (defun devrel-mode-update-beams (beam dirs)
@@ -130,5 +157,3 @@
         (apply #'message success-msg success-args)
       (apply #'message failure-msg failure-args))
     result))
-
-
