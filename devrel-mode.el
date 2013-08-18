@@ -157,3 +157,5 @@
         (apply #'message success-msg success-args)
       (apply #'message failure-msg failure-args))
     result))
+
+(provide 'devrel-mode)
