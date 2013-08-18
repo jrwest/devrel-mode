@@ -1,8 +1,19 @@
+;; TODO: cluster mgmt interactive commands/update all beams/rebuild riak dir (build.sh)
+
+;; Mode Globals and Definitions
 (defvar devrel-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-x\C-rub" 'devrel-mode-update-beam)
+    (define-key map "\C-x\C-rrn" 'devrel-mode-display-running-nodes)
+    (define-key map "\C-x\C-rms" 'devrel-mode-display-member-status)
+    (define-key map "\C-x\C-rsn" 'devrel-mode-start-node)
+    (define-key map "\C-x\C-rxn" 'devrel-mode-stop-node)
+    (define-key map "\C-x\C-rrn" 'devrel-mode-restart-node)
     map)
   "Keymap for devrel-mode")
+
+(defconst devrel-mode-msgs-buffer-name "*msgs devrel-mode*")
+(defconst devrel-mode-buffer-name "*devrel-mode*")
 
 (define-minor-mode devrel-mode
   "Toggle devrel-mode. a mode for working w/ Riak devrels"
@@ -25,6 +36,33 @@
     (or (string-equal "riak_core" dep)
         (string-equal "riak_kv" dep))))
 
+;; END Mode Globals and Definitions
+
+;; Interactive Functions
+(defun devrel-mode-display-running-nodes ()
+  "TODO docstring"
+  (interactive)
+  (let ((buf (get-buffer-create devrel-mode-buffer-name))
+        (running (mapconcat 'identity (devrel-mode-running-nodes) "\n")))
+    (with-current-buffer buf
+      (erase-buffer)
+      (insert "Running Nodes: \n")
+      (insert "--------------\n")
+      (insert running))
+    (display-buffer buf)))
+
+(defun devrel-mode-display-member-status ()
+  "display member status (according to dev1)"
+  (interactive)
+  (let ((buf1 (get-buffer-create devrel-mode-msgs-buffer-name))
+        (buf2 (get-buffer-create devrel-mode-buffer-name)))
+    (with-current-buffer buf1 (erase-buffer))
+    (devrel-mode-riak-admin-member-status (devrel-mode-buffer-riak-dir) "dev1")
+    (with-current-buffer buf2
+      (erase-buffer)
+      (insert-buffer buf1))
+    (display-buffer buf2)))
+
 ;; TODO: compile or force save to compile first (assuming edts mode)?
 (defun devrel-mode-update-beam ()
   "updates the clusters lib dirs w/ beam file for current buffer"
@@ -32,22 +70,60 @@
   (devrel-mode-update-beams (devrel-mode-buffer-beam-file-path) (devrel-mode-buffer-lib-dirs))
   (message "updated beams for %s" (file-name-nondirectory (buffer-file-name))))
 
+(defun devrel-mode-start-node (node)
+  "TODO docstring"
+  (interactive "sstart node (devN): ")
+  (devrel-mode-riak-start (devrel-mode-buffer-riak-dir) node))
+
+(defun devrel-mode-stop-node (node)
+  "TODO docstring"
+  (interactive "sstop node (devN): ")
+  (devrel-mode-riak-stop (devrel-mode-buffer-riak-dir) node))
+
+(defun devrel-mode-restart-node (node)
+  "TODO docstring"
+  (interactive "sstop node (devN): ")
+  (devrel-mode-riak-stop (devrel-mode-buffer-riak-dir) node)
+  (devrel-mode-riak-start (devrel-mode-buffer-riak-dir) node))
+
+;; END interactive functions
+
+(defun devrel-mode-running-nodes ()
+  "TODO docstring"
+  (loop for path in (devrel-mode-buffer-dev-dirs)
+        if (= 0 (devrel-mode-riak-ping (devrel-mode-buffer-riak-dir) (file-name-nondirectory path)))
+        collect (file-name-nondirectory path)))
+
 (defun devrel-mode-update-beams (beam dirs)
   (if (null dirs) 'ok
     (progn
-      (call-process "cp" nil (get-buffer-create "*devrel-mode*") nil beam (car dirs))
+      (call-process "cp" nil (get-buffer-create devrel-mode-msgs-buffer-name) nil beam (car dirs))
       (devrel-mode-update-beams beam (cdr dirs)))))
+
+(defun devrel-mode-buffer-riak-dir ()
+  "returns riak dir for this buffer. assumes ../riak"
+  (concat (devrel-mode-buffer-root-path) "../riak"))
 
 (defun devrel-mode-buffer-lib-dirs ()
   "returns list of lib directories for this riak dep. assumes ../riak"
   (file-expand-wildcards (devrel-mode-buffer-lib-wildcard)))
 
+(defun devrel-mode-buffer-dev-dirs ()
+  "returns list of dev* directories for this riak dep. assumes ../riak"
+  (file-expand-wildcards (devrel-mode-buffer-dev-wildcard)))
+
+;; TODO use dev-wildcard and riak-dir
 (defun devrel-mode-buffer-lib-wildcard ()
   "return wildcard string to search for lib directories for this riak dependency. assumes ../riak"
   (concat (devrel-mode-buffer-root-path)
           "../riak/dev/dev*/lib/"
           (devrel-mode-buffer-dep-name)
           "*/ebin"))
+;; TODO use riak-dir
+(defun devrel-mode-buffer-dev-wildcard ()
+  "return wildcard string to search for dev* directories for this riak dep. assumes ../riak"
+  (concat (devrel-mode-buffer-root-path)
+          "../riak/dev/dev*"))
 
 (defun devrel-mode-buffer-root-path ()
   "return directory below src directory this file is in"
@@ -73,8 +149,6 @@
     (edts-shell-make-comint-buffer
      node-name node-name path
      (list "bin/riak" "console"))))
-
-;;(defun devrel-mode-running-nodes (riak-path
 
 ;; TODO: bail on failure here? and reset nodes?
 (defun devrel-mode-build-cluster (riak-path nodes)
@@ -142,13 +216,14 @@
   (devrel-mode-riak-cmd riak-path node "riak-admin" '("member-status")))
 
 (defun devrel-mode-riak-cmd (riak-path node bin-file cmd)
-  "runs command synchronously, dumping to output to the *devrel-mode* buf. exit status returned"
+  "runs command synchronously, dumping to output to the devrel-mode-messages-buffer-name
+buf. exit status returned"
   (let* ((bin (concat "bin/" bin-file))
          (node-name (concat node "@127.0.0.1"))
          (dir-before (substring (pwd) 10))
          (path (concat riak-path "/dev/" node))
          (full-bin (concat path "/" bin))) ;; TODO: deal w/ "/" (filename:join equiv?)
-    (apply #'call-process full-bin nil (get-buffer-create "*devrel-mode*") nil cmd)))
+    (apply #'call-process full-bin nil (get-buffer-create devrel-mode-msgs-buffer-name) nil cmd)))
 
 (defun devrel-mode-exit-message (result success-msg success-args failure-msg failure-args)
   "notifies result of process based on exit status"
