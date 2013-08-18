@@ -3,12 +3,12 @@
 ;; Mode Globals and Definitions
 (defvar devrel-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "\C-x\C-rub" 'devrel-mode-update-beam)
-    (define-key map "\C-x\C-rrn" 'devrel-mode-display-running-nodes)
-    (define-key map "\C-x\C-rms" 'devrel-mode-display-member-status)
-    (define-key map "\C-x\C-rsn" 'devrel-mode-start-node)
-    (define-key map "\C-x\C-rxn" 'devrel-mode-stop-node)
-    (define-key map "\C-x\C-rrn" 'devrel-mode-restart-node)
+    (define-key map "\C-x\C-rub"   'devrel-mode-update-beam)
+    (define-key map "\C-x\C-r\C-r" 'devrel-mode-display-running-nodes)
+    (define-key map "\C-x\C-rms"   'devrel-mode-display-member-status)
+    (define-key map "\C-x\C-rsn"   'devrel-mode-start-node)
+    (define-key map "\C-x\C-rxn"   'devrel-mode-stop-node)
+    (define-key map "\C-x\C-rrn"   'devrel-mode-restart-node)
     map)
   "Keymap for devrel-mode")
 
@@ -82,7 +82,7 @@
 
 (defun devrel-mode-restart-node (node)
   "TODO docstring"
-  (interactive "sstop node (devN): ")
+  (interactive "srestart node (devN): ")
   (devrel-mode-riak-stop (devrel-mode-buffer-riak-dir) node)
   (devrel-mode-riak-start (devrel-mode-buffer-riak-dir) node))
 
