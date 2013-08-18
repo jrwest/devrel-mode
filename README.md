@@ -27,16 +27,27 @@ directly (e.g. in `deps/<something>/src`) then `devrel-mode` does not
 support you (yet -- it should be an easy change and sometimes I work
 this way too. PR and/or beers accepted).
 
+It is also assumed that you have built a devrel in the `riak`
+directory once. `devrel-mode` is meant to take you from there
+(although I'm sure it falls short in a few places).
+
 `devrel-mode` also assumes you use
 [edts](https://github.com/tjarvstrand/edts). Actually, you probably
 don't need `edts-mode` enabled on your buffer to use `devrel-mode` but
 for things like `riak console` support `devrel-mode` uses EDTS
-functions so it should be loaded in Emacs.
+functions so it should be loaded in Emacs. You must at least be using
+`erlang-mode` in order for devrel-mode to start automatically (it uses
+the mode's hook).
+
+## Installation
+
+Clone this repo. Add the path to your Emacs load path and `(require
+'devrel-mode)`.
 
 ## Usage
 
 *devrel-mode* comes with the following built in commands. All commands
- are prefixes with the key binding "C-x C-r"
+ are prefixed with the key binding `C-x C-r`.
 
 * `C-r` - display list of running nodes (pinging each one to
   determine if they are up)
@@ -63,4 +74,3 @@ functions so it should be loaded in Emacs.
 # License
 
 See `LICENSE.txt`.
-
