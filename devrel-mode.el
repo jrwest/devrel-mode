@@ -1,14 +1,21 @@
-;; TODO: cluster mgmt interactive commands/update all beams/rebuild riak dir (build.sh)
+;; TODO: cluster mgmt interactive commands/update all beams/rebuild riak dir (build.sh)/
+;; TODO: start multiple nodes
 
 ;; Mode Globals and Definitions
 (defvar devrel-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "\C-x\C-rub"   'devrel-mode-update-beam)
+    (define-key map "\C-x\C-r\C-b" 'devrel-mode-update-beam)
     (define-key map "\C-x\C-r\C-r" 'devrel-mode-display-running-nodes)
     (define-key map "\C-x\C-rms"   'devrel-mode-display-member-status)
-    (define-key map "\C-x\C-rsn"   'devrel-mode-start-node)
+    (define-key map "\C-x\C-rsn"   'devrel-mode-start-nodes)
+    (define-key map "\C-x\C-r\C-c" 'devrel-mode-console)
     (define-key map "\C-x\C-rxn"   'devrel-mode-stop-node)
     (define-key map "\C-x\C-rrn"   'devrel-mode-restart-node)
+    (define-key-map "\C-x\C-r\C-x" 'devrel-mode-reset-nodes)
+    (define-key-map "\C-x\C-rcj"   'devrel-mode-cluster-join)
+    (define-key-map "\C-x\C-rcp"   'devrel-mode-cluster-plan)
+    (define-key-map "\C-x\C-rcc"   'devrel-mode-cluster-commit)
+    (define-key-map "\C-x\C-rcb"   'devrel-mode-cluster-build)
     map)
   "Keymap for devrel-mode")
 
@@ -28,7 +35,7 @@
 
 (defun devrel-mode-start-hook ()
   "hook to start devrel-mode if in a riak dependency"
-  (if (devrel-mode-buffer-valid-dep) (devrel-mode) nil))    
+  (if (devrel-mode-buffer-valid-dep) (devrel-mode) nil))
 
 (defun devrel-mode-buffer-valid-dep ()
   "returns true if the file belongs to a riak dependency (hardcoded :()"
@@ -70,10 +77,17 @@
   (devrel-mode-update-beams (devrel-mode-buffer-beam-file-path) (devrel-mode-buffer-lib-dirs))
   (message "updated beams for %s" (file-name-nondirectory (buffer-file-name))))
 
-(defun devrel-mode-start-node (node)
+(defun devrel-mode-start-nodes (nodes)
   "TODO docstring"
-  (interactive "sstart node (devN): ")
-  (devrel-mode-riak-start (devrel-mode-buffer-riak-dir) node))
+  (interactive "sstart nodes (devN[,devN,...,devN])): ")
+  (let ((nodes-list (split-string nodes ",")))
+        (devrel-mode-riak-start-nodes (devrel-mode-buffer-riak-dir) nodes-list)))
+
+(defun devrel-mode-console (node)
+  "TODO docstring"
+  (interactive "sconsole for (devN): ")
+  (devrel-mode-riak-console (devrel-mode-buffer-riak-dir) node)
+  (display-buffer (concat node "@127.0.0.1")))
 
 (defun devrel-mode-stop-node (node)
   "TODO docstring"
@@ -85,6 +99,61 @@
   (interactive "srestart node (devN): ")
   (devrel-mode-riak-stop (devrel-mode-buffer-riak-dir) node)
   (devrel-mode-riak-start (devrel-mode-buffer-riak-dir) node))
+
+(defun devrel-mode-reset-nodes (sure)
+  "TODO docstring"
+  (interactive "care you sure? [y/N]: ")
+  (if (= 121 (downcase sure))
+      (progn
+        (loop for n in (devrel-mode-running-nodes) do (devrel-mode-stop-node n))
+        (loop for path in (devrel-mode-buffer-data-dirs) do
+              (call-process "rm"
+                            nil (get-buffer-create devrel-mode-msgs-buffer-name) nil "-r" path))
+        (message "nodes reset"))
+    'ok))
+
+(defun devrel-mode-cluster-join (node to)
+  "TODO docstring"
+  (interactive "sjoin node (devN): \nsto (devN): ")
+  (devrel-mode-riak-admin-cluster-join (devrel-mode-buffer-riak-dir) node (concat to "@127.0.0.1"))
+  (message "staged join of %s to %s" node to))
+
+;; TODO: output plan to buffer
+(defun devrel-mode-cluster-plan ()
+  "TODO docstring. uses dev1"
+  (interactive)
+  (let ((buf1 (get-buffer-create devrel-mode-msgs-buffer-name))
+        (buf2 (get-buffer-create devrel-mode-buffer-name)))
+    (with-current-buffer buf1 (erase-buffer))
+    (devrel-mode-riak-admin-cluster-plan (devrel-mode-buffer-riak-dir) "dev1")
+    (with-current-buffer buf2
+      (erase-buffer)
+      (insert-buffer buf1))
+    (display-buffer buf2)))
+
+(defun devrel-mode-cluster-commit ()
+  "TODO docstring. uses dev1"
+  (interactive)
+  (let ((buf1 (get-buffer-create devrel-mode-msgs-buffer-name))
+        (buf2 (get-buffer-create devrel-mode-buffer-name)))
+    (with-current-buffer buf1 (erase-buffer))
+    (devrel-mode-riak-admin-cluster-commit (devrel-mode-buffer-riak-dir) "dev1")
+    (with-current-buffer buf2
+      (erase-buffer)
+      (insert-buffer buf1))
+    (display-buffer buf2)))
+
+(defun devrel-mode-cluster-build (nodes)
+  "builds fresh cluster, resetting one thats running"
+  (interactive "sbuild cluster with nodes: (devN,devN,[,devN])")
+  (let ((nodes-list (split-string nodes ",")))
+    (devrel-mode-reset-nodes 121)
+    (devrel-mode-start-nodes nodes)
+    (loop for n in (cdr nodes-list) do
+          (devrel-mode-cluster-join n (car nodes-list)))
+    (devrel-mode-cluster-plan)
+    (devrel-mode-cluster-commit)
+    (devrel-mode-display-member-status)))
 
 ;; END interactive functions
 
@@ -104,6 +173,10 @@
   "returns riak dir for this buffer. assumes ../riak"
   (concat (devrel-mode-buffer-root-path) "../riak"))
 
+(defun devrel-mode-buffer-data-dirs ()
+  "returns lib of data directories for this riak dep. assumes ../riak"
+  (file-expand-wildcards (devrel-mode-buffer-data-wildcard)))
+
 (defun devrel-mode-buffer-lib-dirs ()
   "returns list of lib directories for this riak dep. assumes ../riak"
   (file-expand-wildcards (devrel-mode-buffer-lib-wildcard)))
@@ -112,6 +185,10 @@
   "returns list of dev* directories for this riak dep. assumes ../riak"
   (file-expand-wildcards (devrel-mode-buffer-dev-wildcard)))
 
+(defun devrel-mode-buffer-data-wildcard ()
+  "returns wildcard string to search for data directories for this riak dep. assumes ../riak"
+  (concat (devrel-mode-buffer-dev-wildcard) "/data"))
+
 ;; TODO use dev-wildcard and riak-dir
 (defun devrel-mode-buffer-lib-wildcard ()
   "return wildcard string to search for lib directories for this riak dependency. assumes ../riak"
@@ -119,6 +196,7 @@
           "../riak/dev/dev*/lib/"
           (devrel-mode-buffer-dep-name)
           "*/ebin"))
+
 ;; TODO use riak-dir
 (defun devrel-mode-buffer-dev-wildcard ()
   "return wildcard string to search for dev* directories for this riak dep. assumes ../riak"
