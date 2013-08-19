@@ -70,6 +70,9 @@ Clone this repo. Add the path to your Emacs load path and `(require
 * `C-b` - update BEAM for buffer. finds the corresponding BEAM file
   for the Erlang file in the buffer and copies it into the right places
   in the devrel
+* `C-a` - update all BEAM files for dependency. Given current buffer
+  determine the riak dependency (e.g. riak_core) and update all beam
+  files in the devrel nodes for it.
 
 # License
 

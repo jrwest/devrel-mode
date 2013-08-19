@@ -5,6 +5,7 @@
 (defvar devrel-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-x\C-r\C-b" 'devrel-mode-update-beam)
+    (define-key map "\C-x\C-r\C-a" 'devrel-mode-update-all-beams)
     (define-key map "\C-x\C-r\C-r" 'devrel-mode-display-running-nodes)
     (define-key map "\C-x\C-rms"   'devrel-mode-display-member-status)
     (define-key map "\C-x\C-rsn"   'devrel-mode-start-nodes)
@@ -69,6 +70,14 @@
       (erase-buffer)
       (insert-buffer buf1))
     (display-buffer buf2)))
+
+(defun devrel-mode-update-all-beams ()
+  "updates cluster's lib dirs w/ all beam files for riak dep associated w/ current buffer"
+  (interactive)
+  (let ((beams (file-expand-wildcards (devrel-mode-buffer-beams-wildcard))))
+    (loop for beam in beams do
+          (devrel-mode-update-beams beam (devrel-mode-buffer-lib-dirs))))
+  (message "updated beams for %s" (devrel-mode-buffer-dep-name)))
 
 ;; TODO: compile or force save to compile first (assuming edts mode)?
 (defun devrel-mode-update-beam ()
@@ -217,6 +226,10 @@
           "../ebin/"
           (file-name-sans-extension (file-name-nondirectory (buffer-file-name)))
           ".beam"))
+
+(defun devrel-mode-buffer-beams-wildcard ()
+  "return wildcard string that matches all beam files corresponding to dependency buffer belongs to"
+  (concat (file-name-directory (buffer-file-name)) "../ebin/*.beam"))
 
 (defun devrel-mode-riak-console (riak-path node)
   "bin/riak console"
