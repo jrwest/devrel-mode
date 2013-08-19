@@ -35,9 +35,21 @@ directory once. `devrel-mode` is meant to take you from there
 [edts](https://github.com/tjarvstrand/edts). Actually, you probably
 don't need `edts-mode` enabled on your buffer to use `devrel-mode` but
 for things like `riak console` support `devrel-mode` uses EDTS
-functions so it should be loaded in Emacs. You must at least be using
-`erlang-mode` in order for devrel-mode to start automatically (it uses
-the mode's hook).
+functions so it should be loaded in Emacs. In addition, several of the
+functions (specifically the ones that update beam files) assume that
+you have compiled the file w/ recent changes (they don't compile for
+you). This is made much easier by using EDTS. You must at least be
+using `erlang-mode` in order for devrel-mode to start automatically
+(it uses the mode's hook).
+
+## Other Caveats
+
+This mode, stupidly, has a hard-coded list of Riak dependencies. The
+list, so far, only contains `riak_core` and `riak_kv` (see
+[here](https://github.com/jrwest/devrel-mode/blob/master/devrel-mode.el#L41-L45)). This
+is only used in the hook that enables `devrel-mode`. These are the
+only deps I've worked w/ so far but it should work for others. Extend
+it and submit PR after testing (or wait til I do :)).
 
 ## Installation
 
