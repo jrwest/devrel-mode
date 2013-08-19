@@ -74,6 +74,10 @@ Clone this repo. Add the path to your Emacs load path and `(require
   determine the riak dependency (e.g. riak_core) and update all beam
   files in the devrel nodes for it.
 
+`devrel-mode` works with two buffers: `*msgs devrel-mode*` and
+`*devrel-mode*`. The latter is shown to you when necessary but it may
+be beneficial to know about them if things go wrong.
+
 # License
 
 See `LICENSE.txt`.
