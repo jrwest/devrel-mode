@@ -76,7 +76,7 @@ Clone this repo. Add the path to your Emacs load path and `(require
 * `c j` - join a node to the cluster. prompts for which node to join
   to which (dev1 - devN).
 * `c p` - runs `riak-admin cluster plan` from dev1
-* `c c` - runs `riak-admin cluster commit` from dev2
+* `c c` - runs `riak-admin cluster commit` from dev1
 * `c b` - builds a cluster, stopping and resetting any running
   nodes. prompts for which nodes to build the cluster from (dev1 - devN).
 * `C-b` - update BEAM for buffer. finds the corresponding BEAM file
