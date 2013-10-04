@@ -11,7 +11,7 @@
     (define-key map "\C-x\C-rsn"   'devrel-mode-start-nodes)
     (define-key map "\C-x\C-r\C-c" 'devrel-mode-console)
     (define-key map "\C-x\C-rxn"   'devrel-mode-stop-node)
-    (define-key map "\C-x\C-rrn"   'devrel-mode-restart-node)
+    (define-key map "\C-x\C-rrn"   'devrel-mode-restart-nodes)
     (define-key map "\C-x\C-r\C-x" 'devrel-mode-reset-nodes)
     (define-key map "\C-x\C-rcj"   'devrel-mode-cluster-join)
     (define-key map "\C-x\C-rcp"   'devrel-mode-cluster-plan)
@@ -103,11 +103,13 @@
   (interactive "sstop node (devN): ")
   (devrel-mode-riak-stop (devrel-mode-buffer-riak-dir) node))
 
-(defun devrel-mode-restart-node (node)
+(defun devrel-mode-restart-nodes (nodes)
   "TODO docstring"
-  (interactive "srestart node (devN): ")
-  (devrel-mode-riak-stop (devrel-mode-buffer-riak-dir) node)
-  (devrel-mode-riak-start (devrel-mode-buffer-riak-dir) node))
+  (interactive "srestart nodes (devN[,devN,...,devN]): ")
+  (let ((nodes-list (split-string nodes ",")))
+    (loop for node in nodes-list do
+          (devrel-mode-riak-stop (devrel-mode-buffer-riak-dir) node)
+          (devrel-mode-riak-start (devrel-mode-buffer-riak-dir) node))))
 
 (defun devrel-mode-reset-nodes (sure)
   "TODO docstring"
