@@ -10,7 +10,7 @@
     (define-key map "\C-x\C-rms"   'devrel-mode-display-member-status)
     (define-key map "\C-x\C-rsn"   'devrel-mode-start-nodes)
     (define-key map "\C-x\C-r\C-c" 'devrel-mode-console)
-    (define-key map "\C-x\C-rxn"   'devrel-mode-stop-node)
+    (define-key map "\C-x\C-rxn"   'devrel-mode-stop-nodes)
     (define-key map "\C-x\C-rrn"   'devrel-mode-restart-nodes)
     (define-key map "\C-x\C-r\C-x" 'devrel-mode-reset-nodes)
     (define-key map "\C-x\C-rcj"   'devrel-mode-cluster-join)
@@ -98,10 +98,11 @@
   (devrel-mode-riak-console (devrel-mode-buffer-riak-dir) node)
   (display-buffer (concat node "@127.0.0.1")))
 
-(defun devrel-mode-stop-node (node)
+(defun devrel-mode-stop-nodes (nodes)
   "TODO docstring"
-  (interactive "sstop node (devN): ")
-  (devrel-mode-riak-stop (devrel-mode-buffer-riak-dir) node))
+  (interactive "sstop nodes (devN[,devN,...,devN): ")
+  (let ((nodes-list (split-string nodes ",")))
+    (devrel-mode-riak-stop-nodes (devrel-mode-buffer-riak-dir) nodes-list)))
 
 (defun devrel-mode-restart-nodes (nodes)
   "TODO docstring"
@@ -116,7 +117,7 @@
   (interactive "care you sure? [y/N]: ")
   (if (= 121 (downcase sure))
       (progn
-        (loop for n in (devrel-mode-running-nodes) do (devrel-mode-stop-node n))
+        (devrel-mode-riak-stop-nodes (devrel-mode-buffer-riak-dir) (devrel-mode-running-nodes))
         (loop for path in (devrel-mode-buffer-data-dirs) do
               (call-process "rm"
                             nil (get-buffer-create devrel-mode-msgs-buffer-name) nil "-r" path))
@@ -274,6 +275,11 @@
   (devrel-mode-exit-message
    (devrel-mode-riak-cmd riak-path node "riak" '("start"))
    "started %s" (list node) "failed to start %s" (list node)))
+
+(defun devrel-mode-riak-stop-nodes (riak-path nodes)
+  "stop nodes"
+  (loop for node in nodes do
+        (devrel-mode-riak-stop riak-path node)))
 
 (defun devrel-mode-riak-stop (riak-path node)
   "bin/riak stop"
