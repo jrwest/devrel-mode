@@ -88,7 +88,7 @@
 
 (defun devrel-mode-start-nodes (nodes)
   "TODO docstring"
-  (interactive "sstart nodes (devN[,devN,...,devN])): ")
+  (interactive "sstart nodes (devN[,devN,...,devN]): ")
   (let ((nodes-list (split-string nodes ",")))
         (devrel-mode-riak-start-nodes (devrel-mode-buffer-riak-dir) nodes-list)))
 
@@ -236,7 +236,7 @@
 (defun devrel-mode-riak-console (riak-path node)
   "bin/riak console"
   (let* ((node-name (concat node "@127.0.0.1"))
-        (path (concat riak-path "/dev/" node))) ;; TODO: deal w/ "/" (filename:join equiv?)    
+        (path (concat riak-path "/dev/" node))) ;; TODO: deal w/ "/" (filename:join equiv?)
     ;; TODO: turn off edts mode?
     (message "starting console for %s" node-name)
     (edts-shell-make-comint-buffer
