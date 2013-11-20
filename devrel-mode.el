@@ -1,11 +1,10 @@
-;; TODO: cluster mgmt interactive commands/update all beams/rebuild riak dir (build.sh)/
-;; TODO: start multiple nodes
-
 ;; Mode Globals and Definitions
 (defvar devrel-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-x\C-r\C-b" 'devrel-mode-update-beam)
     (define-key map "\C-x\C-r\C-a" 'devrel-mode-update-all-beams)
+    (define-key map "\C-x\C-r\M-b" 'devrel-mode-update-rt-current-beam)
+    (define-key map "\C-x\C-r\M-a" 'devrel-mode-update-all-rt-current-beams)
     (define-key map "\C-x\C-r\C-r" 'devrel-mode-display-running-nodes)
     (define-key map "\C-x\C-rms"   'devrel-mode-display-member-status)
     (define-key map "\C-x\C-rsn"   'devrel-mode-start-nodes)
@@ -83,8 +82,46 @@
 (defun devrel-mode-update-beam ()
   "updates the clusters lib dirs w/ beam file for current buffer"
   (interactive)
-  (devrel-mode-update-beams (devrel-mode-buffer-beam-file-path) (devrel-mode-buffer-lib-dirs))
+ (devrel-mode-update-beams (devrel-mode-buffer-beam-file-path) (devrel-mode-buffer-lib-dirs))
   (message "updated beams for %s" (file-name-nondirectory (buffer-file-name))))
+
+(defun devrel-mode-update-all-rt-current-beams ()
+  "updates cluster in RT_DEST_DIR/current's libdirs w/ beam file for current buffer"
+  (interactive)
+  (let ((libdirs (devrel-mode-rt-current-lib-dirs)))
+    (when libdirs
+      (let ((beams (file-expand-wildcards (devrel-mode-buffer-beams-wildcard))))
+        (loop for beam in beams do
+              (devrel-mode-update-beams beam libdirs)))
+      (call-process "git" nil (get-buffer-create devrel-mode-msgs-buffer-name) nil
+                    "--git-dir"
+                    (concat (getenv "RT_DEST_DIR") "/.git")
+                    "--work-tree"
+                    (getenv "RT_DEST_DIR")
+                    "commit"
+                    "-a"
+                    "-m" "riak_test init"
+                    "--amend")
+      (message "updated rt/current beams for %s" (devrel-mode-buffer-dep-name)))))
+
+
+;; TODO: compile or force save to compile first (assuming edts mode)?
+(defun devrel-mode-update-rt-current-beam ()
+  "updates the cluster in RT_DEST_DIR/current's libdirs w/ beam file for current buffer"
+  (interactive)
+  (let ((libdirs (devrel-mode-rt-current-lib-dirs)))
+    (when libdirs
+      (devrel-mode-update-beams (devrel-mode-buffer-beam-file-path) libdirs)
+      (call-process "git" nil (get-buffer-create devrel-mode-msgs-buffer-name) nil
+                    "--git-dir"
+                    (concat (getenv "RT_DEST_DIR") "/.git")
+                    "--work-tree"
+                    (getenv "RT_DEST_DIR")
+                    "commit"
+                    "-a"
+                    "-m" "riak_test init"
+                    "--amend")
+      (message "updated rt/current beams for %s" (file-name-nondirectory (buffer-file-name))))))
 
 (defun devrel-mode-start-nodes (nodes)
   "TODO docstring"
@@ -180,6 +217,19 @@
     (progn
       (call-process "cp" nil (get-buffer-create devrel-mode-msgs-buffer-name) nil beam (car dirs))
       (devrel-mode-update-beams beam (cdr dirs)))))
+
+(defun devrel-mode-rt-current-lib-dirs ()
+  "returns list of lib directories in RT_DEST_DIR/riak/current. nil returned if env var not set"
+  (let ((rtpath (getenv "RT_DEST_DIR")))
+    (when rtpath
+      (file-expand-wildcards (devrel-mode-rt-current-lib-wildcard rtpath)))))
+
+(defun devrel-mode-rt-current-lib-wildcard (base)
+  "returns wildcard sdtring to search for lib directories inside rtpath"
+  (concat base
+          "/current/dev/dev*/lib/"
+          (devrel-mode-buffer-dep-name)
+          "*/ebin"))
 
 (defun devrel-mode-buffer-riak-dir ()
   "returns riak dir for this buffer. assumes ../riak"
