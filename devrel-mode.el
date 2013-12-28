@@ -7,12 +7,14 @@
     (define-key map "\C-x\C-r\M-a" 'devrel-mode-update-all-rt-current-beams)
     (define-key map "\C-x\C-r\C-r" 'devrel-mode-display-running-nodes)
     (define-key map "\C-x\C-rms"   'devrel-mode-display-member-status)
+    (define-key map "\C-x\C-rrs"   'devrel-mode-display-ring-status)
     (define-key map "\C-x\C-rsn"   'devrel-mode-start-nodes)
     (define-key map "\C-x\C-r\C-c" 'devrel-mode-console)
     (define-key map "\C-x\C-rxn"   'devrel-mode-stop-nodes)
     (define-key map "\C-x\C-rrn"   'devrel-mode-restart-nodes)
     (define-key map "\C-x\C-r\C-x" 'devrel-mode-reset-nodes)
     (define-key map "\C-x\C-rcj"   'devrel-mode-cluster-join)
+    (define-key map "\C-x\C-rcl"   'devrel-mode-cluster-leave)
     (define-key map "\C-x\C-rcp"   'devrel-mode-cluster-plan)
     (define-key map "\C-x\C-rcc"   'devrel-mode-cluster-commit)
     (define-key map "\C-x\C-rcb"   'devrel-mode-cluster-build)
@@ -66,6 +68,18 @@
         (buf2 (get-buffer-create devrel-mode-buffer-name)))
     (with-current-buffer buf1 (erase-buffer))
     (devrel-mode-riak-admin-member-status (devrel-mode-buffer-riak-dir) "dev1")
+    (with-current-buffer buf2
+      (erase-buffer)
+      (insert-buffer buf1))
+    (display-buffer buf2)))
+
+(defun devrel-mode-display-ring-status ()
+  "display ring status (according to dev1)"
+  (interactive)
+  (let ((buf1 (get-buffer-create devrel-mode-msgs-buffer-name))
+        (buf2 (get-buffer-create devrel-mode-buffer-name)))
+    (with-current-buffer buf1 (erase-buffer))
+    (devrel-mode-riak-admin-ring-status (devrel-mode-buffer-riak-dir) "dev1")
     (with-current-buffer buf2
       (erase-buffer)
       (insert-buffer buf1))
@@ -167,6 +181,12 @@
   (interactive "sjoin node (devN): \nsto (devN): ")
   (devrel-mode-riak-admin-cluster-join (devrel-mode-buffer-riak-dir) node (concat to "@127.0.0.1"))
   (message "staged join of %s to %s" node to))
+
+(defun devrel-mode-cluster-leave (node)
+  "TODO docstring"
+  (interactive "sleave node (devN): ")
+  (devrel-mode-riak-admin-cluster-leave (devrel-mode-buffer-riak-dir) node)
+  (message "staged leave of %s" node))
 
 ;; TODO: output plan to buffer
 (defun devrel-mode-cluster-plan ()
@@ -351,6 +371,12 @@
   (message "join %s to %s" node join-to)
   (devrel-mode-riak-cmd riak-path node "riak-admin" (list "cluster" "join" join-to)))
 
+(defun devrel-mode-riak-admin-cluster-leave (riak-path node)
+  "bin/riak-admin cluster join <join-to>"
+  (message "leave %s" node)
+  (devrel-mode-riak-cmd riak-path node "riak-admin" (list "cluster" "leave")))
+
+
 (defun devrel-mode-riak-admin-cluster-plan (riak-path node)
   "bin/riak-admin cluster plan"
   (message "plan cluster on %s" node)
@@ -364,6 +390,10 @@
 (defun devrel-mode-riak-admin-member-status (riak-path node)
   "bin/riak-admin member-status"
   (devrel-mode-riak-cmd riak-path node "riak-admin" '("member-status")))
+
+(defun devrel-mode-riak-admin-ring-status (riak-path node)
+  "bin/riak-admin ring-status"
+  (devrel-mode-riak-cmd riak-path node "riak-admin" '("ring-status")))
 
 (defun devrel-mode-riak-cmd (riak-path node bin-file cmd)
   "runs command synchronously, dumping to output to the devrel-mode-messages-buffer-name

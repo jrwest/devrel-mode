@@ -72,9 +72,12 @@ Clone this repo. Add the path to your Emacs load path and `(require
 * `C-c` - displays (and possibly starts using `riak console`) the
   console for a node. Will prompt for which (dev1 - devN)
 * `m s` - displays member status (using dev1) for the devrel
+* `r s` - displays ring status (using dev1) for the devrel
 * `C-x` - resets nodes (stops them and deletes their data directories)
 * `c j` - join a node to the cluster. prompts for which node to join
   to which (dev1 - devN).
+* `c l` - tells the specified node to leave the cluster. prompts for
+  which node (dev1 - devN).
 * `c p` - runs `riak-admin cluster plan` from dev1
 * `c c` - runs `riak-admin cluster commit` from dev1
 * `c b` - builds a cluster, stopping and resetting any running
@@ -85,6 +88,13 @@ Clone this repo. Add the path to your Emacs load path and `(require
 * `C-a` - update all BEAM files for dependency. Given current buffer
   determine the riak dependency (e.g. riak_core) and update all beam
   files in the devrel nodes for it.
+* `M-b` - update BEAM in `riak_test` current. finds the corresponding
+  BEAM file for the Erlang file in the buffer and updates the
+  `current` devrel in `riak_test`. The environment variable
+  `RT_DEST_DIR` must be set to the root of `riak_test`'s riak
+  directories (e.g. `/path/to/rt/riak`).
+* `M-a` - update all BEAM files for dependency in `riak_test`
+  current. See `M-b` above.
 
 `devrel-mode` works with two buffers: `*msgs devrel-mode*` and
 `*devrel-mode*`. The latter is shown to you when necessary but it may
