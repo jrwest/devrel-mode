@@ -44,6 +44,7 @@
   (let ((dep (devrel-mode-buffer-dep-name)))
     (or (string-equal "riak_core" dep)
         (string-equal "riak_kv" dep)
+        (string-equal "yokozuna" dep)
         (string-equal "cuttlefish" dep))))
 
 ;; END Mode Globals and Definitions
